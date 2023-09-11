@@ -25,7 +25,7 @@ async fn main() {
         .with_state(app_state);
 
     // run it with hyper on localhost:3000s
-    axum::Server::bind(&"0.0.0.0:8080".parse().unwrap())
+    axum::Server::bind(&"0.0.0.0:80".parse().unwrap())
         .serve(app.into_make_service())
         .await
         .unwrap();
