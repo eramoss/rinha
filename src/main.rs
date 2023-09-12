@@ -9,7 +9,6 @@ use axum::{
 use persistence::Repo;
 use routes::*;
 use std::{env, sync::Arc};
-use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() {
@@ -18,8 +17,7 @@ async fn main() {
     let database_url = env::var("DATABASE_URL").expect("expected URL of the database");
 
     let pool = Repo::new(database_url).await;
-    // let people: HashMap<Uuid, Person> = HashMap::new();
-    let app_state = Arc::new(Mutex::new(pool));
+    let app_state = Arc::new(pool);
 
     // build our application with a single route
     let app = Router::new()

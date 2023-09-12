@@ -6,12 +6,11 @@ use axum::{
     Json,
 };
 
-use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::{persistence::Repo, person::Person};
 
-type AppState = Arc<Mutex<Repo>>;
+type AppState = Arc<Repo>;
 
 pub async fn search_people_by_term(
     State(state): State<AppState>,
@@ -21,7 +20,7 @@ pub async fn search_people_by_term(
         Some(term) => term,
         None => return Err(StatusCode::UNPROCESSABLE_ENTITY),
     };
-    let result = state.lock().await.select_by_term(term.to_string()).await;
+    let result = state.select_by_term(term.to_string()).await;
 
     let people = match result {
         Ok(people) => {
@@ -40,7 +39,7 @@ pub async fn search_person_by_id(
     State(state): State<AppState>,
     Path(person_id): Path<Uuid>,
 ) -> Result<(StatusCode, Json<Person>), StatusCode> {
-    let result = state.lock().await.select_by_id(person_id).await;
+    let result = state.select_by_id(person_id).await;
 
     match result {
         Ok(person) => Ok((StatusCode::OK, Json(person))),
@@ -51,7 +50,7 @@ pub async fn create_person(
     State(state): State<AppState>,
     person: Json<Person>,
 ) -> Result<(StatusCode, Json<Person>), StatusCode> {
-    let result = state.lock().await.create_new_person(person).await;
+    let result = state.create_new_person(person).await;
 
     match result {
         Ok(person) => Ok((StatusCode::CREATED, person)),
@@ -61,7 +60,7 @@ pub async fn create_person(
 pub async fn amount_of_people(
     State(state): State<AppState>,
 ) -> Result<(StatusCode, String), StatusCode> {
-    let result = state.lock().await.count_amount_of_person().await;
+    let result = state.count_amount_of_person().await;
     match result {
         Ok(count) => Ok((StatusCode::OK, count.to_string())),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -110,7 +109,7 @@ pub async fn amount_of_people(
 //         let person_as_json = json!(person).to_string();
 //         let _ = create_person(State(repo.clone()), person_as_json).await;
 
-//         assert_eq!(repo.lock().await.len(), 1);
+//         assert_eq!(repo.await.len(), 1);
 //     }
 
 //     #[tokio::test]
@@ -137,7 +136,7 @@ pub async fn amount_of_people(
 //             date!(1999 - 9 - 9),
 //             Some(vec!["c".to_string(), "c++".to_string()]),
 //         );
-//         repo.lock().await.insert(person.id, person);
+//         repo.await.insert(person.id, person);
 
 //         let (_, amount_people) = amount_of_people(State(repo)).await;
 
@@ -171,12 +170,12 @@ pub async fn amount_of_people(
 //             Some(vec!["c".to_string()]),
 //         );
 //         let id = person.id;
-//         people.lock().await.insert(id, person);
+//         people.await.insert(id, person);
 //         State(people)
 //     }
 
 //     async fn get_first_elem_of_repo(map: &AppState) -> Result<Person, &'static str> {
-//         for (_, person) in map.lock().await.clone().iter() {
+//         for (_, person) in map.await.clone().iter() {
 //             return Ok(person.clone());
 //         }
 //         Err("não existe elementos")
