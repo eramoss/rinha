@@ -1,3 +1,4 @@
+mod persistence;
 mod person;
 mod routes;
 
@@ -5,16 +6,20 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use person::Person;
+use persistence::Repo;
 use routes::*;
-use std::{collections::HashMap, sync::Arc};
+use std::{env, sync::Arc};
 use tokio::sync::Mutex;
-use uuid::Uuid;
 
 #[tokio::main]
 async fn main() {
-    let people: HashMap<Uuid, Person> = HashMap::new();
-    let app_state = Arc::new(Mutex::new(people));
+    dotenv::dotenv().ok();
+    let url_api = env::var("URL_API").unwrap_or("0.0.0.0:80".to_string());
+    let database_url = env::var("DATABASE_URL").expect("expected URL of the database");
+
+    let pool = Repo::new(database_url).await;
+    // let people: HashMap<Uuid, Person> = HashMap::new();
+    let app_state = Arc::new(Mutex::new(pool));
 
     // build our application with a single route
     let app = Router::new()
@@ -24,8 +29,7 @@ async fn main() {
         .route("/pessoas", get(search_people_by_term))
         .with_state(app_state);
 
-    // run it with hyper on localhost:3000s
-    axum::Server::bind(&"0.0.0.0:80".parse().unwrap())
+    axum::Server::bind(&url_api.parse().unwrap())
         .serve(app.into_make_service())
         .await
         .unwrap();
