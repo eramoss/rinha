@@ -1,5 +1,5 @@
 use axum::Json;
-use sqlx::PgPool;
+use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
 use crate::person::Person;
@@ -17,13 +17,12 @@ impl Repo {
     }
 
     pub async fn select_by_id(&self, id: Uuid) -> Result<Person, sqlx::Error> {
-        let row = sqlx::query_as!(
-            Person,
+        let row = sqlx::query_as(
             "SELECT id, name, nick, birth_date, stack 
              FROM people
              WHERE id = ($1)",
-            id
         )
+        .bind(id)
         .fetch_one(&self.pool)
         .await?;
 
@@ -31,21 +30,20 @@ impl Repo {
     }
 
     pub async fn select_by_term(&self, query: String) -> Result<Vec<Person>, sqlx::Error> {
-        let row = sqlx::query_as!(
-            Person,
+        let row = sqlx::query_as(
             "SELECT id, name, nick, birth_date, stack
              FROM people
              WHERE search ~ $1
              LIMIT 50",
-            query
         )
+        .bind(query)
         .fetch_all(&self.pool)
         .await?;
 
         Ok(row)
     }
     pub async fn count_amount_of_person(&self) -> Result<i64, sqlx::Error> {
-        let row = sqlx::query_as!(DataLength, "SELECT count(*) FROM people")
+        let row: DataLength = sqlx::query_as("SELECT count(*) FROM people")
             .fetch_one(&self.pool)
             .await?;
 
@@ -55,15 +53,15 @@ impl Repo {
         &self,
         person: Json<Person>,
     ) -> Result<Json<Person>, sqlx::Error> {
-        sqlx::query!(
+        sqlx::query(
             "INSERT INTO people (id, name, nick, birth_date, stack) VALUES
             ($1, $2, $3, $4, $5)",
-            person.id,
-            person.name,
-            person.nick,
-            person.birth_date,
-            &person.stack.clone().unwrap()
         )
+        .bind(&person.id)
+        .bind(&person.name)
+        .bind(&person.nick)
+        .bind(&person.birth_date)
+        .bind(&person.stack)
         .execute(&self.pool)
         .await?;
 
@@ -71,6 +69,7 @@ impl Repo {
     }
 }
 
+#[derive(FromRow)]
 struct DataLength {
     count: Option<i64>,
 }

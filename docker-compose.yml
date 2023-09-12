@@ -1,7 +1,7 @@
 version: '3.5'
 services:
   api1: # API - Instância 01
-    image: rinha-api
+    build: .
     hostname: api1
     depends_on:
       - db
@@ -16,7 +16,7 @@ services:
       - URL_API=0.0.0.0:80
       - DATABASE_URL=postgres://rinha:rinha@db/rinha
   api2: # API - Instância 01
-    image: rinha-api
+    build: .
     hostname: api2
     depends_on:
       - db
