@@ -3,18 +3,18 @@ use serde::{Deserialize, Serialize};
 use time::Date;
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, sqlx::FromRow)]
 pub struct Person {
     #[serde(default = "Uuid::now_v7")]
     pub id: Uuid,
     pub name: String,
     pub nick: String,
     pub birth_date: Date,
-    pub stack: Vec<String>,
+    pub stack: Option<Vec<String>>,
 }
 
 impl Person {
-    pub fn new(name: String, nick: String, birth_date: Date, stack: Vec<String>) -> Person {
+    pub fn new(name: String, nick: String, birth_date: Date, stack: Option<Vec<String>>) -> Person {
         Person {
             id: Uuid::now_v7(),
             name,
@@ -26,18 +26,39 @@ impl Person {
     pub fn deserialize_from_string(string: String) -> Result<Person, PersonParserError> {
         let person_result: Result<Person, serde_json::Error> = serde_json::from_str(&string);
 
-        Self::length_nick_rule(person_result)
+        Self::apply_rules(person_result)
     }
 
-    fn length_nick_rule(
-        person: Result<Person, serde_json::Error>,
-    ) -> Result<Person, PersonParserError> {
+    fn apply_rules(person: Result<Person, serde_json::Error>) -> Result<Person, PersonParserError> {
         match person {
             Ok(person) => {
-                if person.nick.len() > 30 {
+                if &person.nick.len() > &32 {
                     return Err(PersonParserError::LengthError(
-                        "nick length must be smaller than 30 characters",
+                        "nick length must be smaller than 32 characters",
                     ));
+                }
+                if &person.name.len() > &100 {
+                    return Err(PersonParserError::LengthError(
+                        "name length must be smaller than 100 characters",
+                    ));
+                }
+                if &person.stack.clone().unwrap_or(vec!["".to_string()]).len() > &32 {
+                    return Err(PersonParserError::LengthError(
+                        "stack length must be smaller than 32 characters",
+                    ));
+                }
+
+                for tech in person
+                    .stack
+                    .clone()
+                    .unwrap_or(vec!["".to_string()])
+                    .into_iter()
+                {
+                    if tech.len() > 32 {
+                        return Err(PersonParserError::LengthError(
+                            "Tech length must be smaller than 32 characters",
+                        ));
+                    }
                 }
                 Ok(person)
             }
